@@ -112,6 +112,24 @@ def run_inference_test(
 def main() -> None:
     config = Config()
 
+    print("\n" + "=" * 60)
+    print("PYTORCH DEVICE & PLATFORM INFO")
+    print("=" * 60)
+    print(f"PyTorch Version: {torch.__version__}")
+    print(f"CUDA/ROCm Available (torch.cuda.is_available()): {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"CUDA/ROCm Device Count: {torch.cuda.device_count()}")
+        print(f"CUDA/ROCm Device Name: {torch.cuda.get_device_name(0)}")
+        print(f"Current Device Index: {torch.cuda.current_device()}")
+    else:
+        print("CUDA/ROCm is NOT available to PyTorch.")
+    
+    is_rocm = hasattr(torch.version, 'hip') and torch.version.hip is not None
+    print(f"ROCm / HIP Active: {is_rocm}")
+    if is_rocm:
+        print(f"ROCm version (torch.version.hip): {torch.version.hip}")
+    print("=" * 60 + "\n")
+
     print(f"[INFO] Loading tokenizer from {config.MODEL_NAME}...")
     tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
     tokenizer.model_max_length = config.MAX_LEN
@@ -135,6 +153,15 @@ def main() -> None:
         logging_steps=config.LOGGING_STEPS,
         remove_unused_columns=False,
     )
+
+    print("\n" + "=" * 60)
+    print("HUGGING FACE / ACCELERATE RESOLVED DEVICES")
+    print("=" * 60)
+    print(f"Resolved Device (training_args.device): {training_args.device}")
+    print(f"Number of GPUs (training_args.n_gpu): {training_args.n_gpu}")
+    print(f"Use MPS (Apple Silicon): {getattr(training_args, 'use_mps_device', False)}")
+    print(f"Local Rank: {training_args.local_rank}")
+    print("=" * 60 + "\n")
 
     print("[INFO] Initializing trainer...")
     trainer = Trainer(
