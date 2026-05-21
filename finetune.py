@@ -7,8 +7,12 @@ from transformers import (
     Trainer,
 )
 from transformers.training_args import TrainingArguments
+from accelerate import PartialState
 
 from config import Config
+
+# Overwrite print with accelerate's main-process-only print
+print = PartialState().print
 
 
 class DiffusionCollator:
