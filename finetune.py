@@ -63,7 +63,7 @@ class DiffusionCollator:
             "input_ids": batch_input_ids,
             "attention_mask": batch_attention,
             "labels": labels,
-            "p": p,
+            "p": torch.full((B,), p, dtype=torch.float32),
         }
 
 
@@ -101,12 +101,16 @@ def run_inference_test(
             clean_up_tokenization_spaces=False,
         )
 
+        p_val = batch["p"]
+        if isinstance(p_val, torch.Tensor):
+            p_val = p_val[0].item()
+
         print("\n" + "=" * 60)
         print("Sample inference")
         print("=" * 60)
         print("\nOriginal Input:")
         print(sample["text"][:256])
-        print(f"\nMasked Input: p={batch['p']}")
+        print(f"\nMasked Input: p={p_val:.4f}")
         print(masked_str)
         print("\nModel Output:")
         print(pred_str)
