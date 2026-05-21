@@ -1,8 +1,9 @@
 import torch
 from datasets import DatasetDict, load_dataset
 from transformers import (
+    AutoTokenizer,
+    PreTrainedTokenizer,
     RobertaForMaskedLM,
-    RobertaTokenizerFast,
     Trainer,
 )
 from transformers.training_args import TrainingArguments
@@ -11,7 +12,7 @@ from config import Config
 
 
 class DiffusionCollator:
-    def __init__(self, tokenizer: RobertaTokenizerFast, config: Config) -> None:
+    def __init__(self, tokenizer: PreTrainedTokenizer, config: Config) -> None:
         self.tokenizer = tokenizer
         self.config = config
         self.special_ids = set(tokenizer.all_special_ids)
@@ -58,54 +59,61 @@ class DiffusionCollator:
             "input_ids": batch_input_ids,
             "attention_mask": batch_attention,
             "labels": labels,
+            "p": p,
         }
 
 
 def run_inference_test(
     model: RobertaForMaskedLM,
-    tokenizer: RobertaTokenizerFast,
+    tokenizer: PreTrainedTokenizer,
     dataset: DatasetDict,
     diffusion_collator: DiffusionCollator,
+    reps: int = 10
 ) -> None:
     """Get a small sample"""
-    print("\n[INFO] Running inference test...")
+    print(f"\n[INFO] Running inference test... {reps} reps")
 
-    sample = next(iter(dataset["train"]))
-    batch = diffusion_collator([sample])
-    input_ids_masked = batch["input_ids"].to(model.device)
+    for _ in range(reps):
+        sample = next(iter(dataset["train"]))
+        batch = diffusion_collator([sample])
+        input_ids_masked = batch["input_ids"].to(model.device)
 
-    model.eval()
-    with torch.no_grad():
-        logits = model(input_ids_masked).logits
-        pred_ids = logits.argmax(dim=-1)
+        model.eval()
+        with torch.no_grad():
+            logits = model(input_ids_masked).logits
+            pred_ids = logits.argmax(dim=-1)
 
-    masked_str = tokenizer.decode(
-        input_ids_masked[0],
-        skip_special_tokens=False,
-        clean_up_tokenization_spaces=False,
-    ).replace(tokenizer.mask_token, "█")
 
-    pred_str = tokenizer.decode(
-        pred_ids[0],
-        skip_special_tokens=True,
-        clean_up_tokenization_spaces=False,
-    )
 
-    print("\n" + "=" * 60)
-    print("Sample inference")
-    print("=" * 60)
-    print("\nMasked Input:")
-    print(masked_str)
-    print("\nModel Output:")
-    print(pred_str)
-    print("=" * 60 + "\n")
+        masked_str = tokenizer.decode(
+            input_ids_masked[0],
+            skip_special_tokens=False,
+            clean_up_tokenization_spaces=False,
+        ).replace(tokenizer.mask_token, "█")
+
+        pred_str = tokenizer.decode(
+            pred_ids[0],
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )
+
+        print("\n" + "=" * 60)
+        print("Sample inference")
+        print("=" * 60)
+        print("\nOriginal Input:")
+        print(sample["text"][:256])
+        print(f"\nMasked Input: p={batch['p']}")
+        print(masked_str)
+        print("\nModel Output:")
+        print(pred_str)
+        print("=" * 60 + "\n")
 
 
 def main() -> None:
     config = Config()
 
     print(f"[INFO] Loading tokenizer from {config.MODEL_NAME}...")
-    tokenizer = RobertaTokenizerFast.from_pretrained(config.MODEL_NAME)
+    tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
     tokenizer.model_max_length = config.MAX_LEN
 
     print("[INFO] Loading OpenWebText dataset...")
