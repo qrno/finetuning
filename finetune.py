@@ -10,17 +10,19 @@ from transformers.training_args import TrainingArguments
 from accelerate import PartialState
 
 from config import Config
+import math
 
-# Overwrite print with accelerate's main-process-only print
+# This is so that things are not printed 4x
 print = PartialState().print
-
 
 class DiffusionCollator:
     def __init__(self, tokenizer: PreTrainedTokenizer, config: Config) -> None:
         self.tokenizer = tokenizer
         self.config = config
         self.special_ids = set(tokenizer.all_special_ids)
-        self.mask_probs = [i / config.MAX_LEN for i in range(1, config.MAX_LEN + 1)]
+        T = 100
+        self.mask_probs = self.mask_probs = [1.0 - math.cos((i / T) * (math.pi / 2)) for i in range(1, T + 1)]
+
 
     def __call__(self, features: list[dict]) -> dict[str, torch.Tensor]:
         texts = []
@@ -52,7 +54,9 @@ class DiffusionCollator:
 
         mask_candidate = (batch_attention == 1) & (~is_special) & (~is_prefix)
 
-        p = float(self.mask_probs[torch.randint(0, len(self.mask_probs), (1,))])
+        p_indices = torch.randint(0, len(self.mask_probs), (B,))
+        p = torch.tensor(self.mask_probs, dtype=torch.float32)[p_indices].unsqueeze(1) # shape (B, 1)
+        
         rand = torch.rand_like(batch_input_ids, dtype=torch.float)
         mask_positions = (rand < p) & mask_candidate
 
@@ -63,7 +67,7 @@ class DiffusionCollator:
             "input_ids": batch_input_ids,
             "attention_mask": batch_attention,
             "labels": labels,
-            "p": torch.full((B,), p, dtype=torch.float32),
+            "p": p.squeeze(1),
         }
 
 

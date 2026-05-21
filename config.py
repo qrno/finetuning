@@ -9,7 +9,7 @@ class Config:
 
     BATCH_SIZE: int = 16
     OUTPUT_DIR: str = "weights"
-    MAX_STEPS: int = 1000
+    MAX_STEPS: int = 100
     SAVE_STEPS: int = 500
-    LOGGING_STEPS: int = 50
+    LOGGING_STEPS: int = 5
     SAVE_TOTAL_LIMIT: int = 1
