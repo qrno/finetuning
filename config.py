@@ -12,15 +12,15 @@ class Config:
 
     # Training
     BATCH_SIZE: int = 16
-    MAX_STEPS: int = 20
-    SAVE_STEPS: int = 50
-    LOGGING_STEPS: int = 5
+    MAX_STEPS: int = 4000
+    SAVE_STEPS: int = 100
+    LOGGING_STEPS: int = 50
     SAVE_TOTAL_LIMIT: int = 1
     OUTPUT_DIR: str = "weights"
 
     # Evaluation
-    EVAL_SAMPLES: int = 500
-    EVAL_STEPS: int = 5
+    EVAL_SAMPLES: int = 160
+    EVAL_STEPS: int = 100
 
     # Sample exploration: print a sample every N collator calls (0 = off)
     SAMPLE_LOG_INTERVAL: int = 0
